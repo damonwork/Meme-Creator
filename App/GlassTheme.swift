@@ -187,8 +187,8 @@ struct ParticleBurstView: View {
         let angle = (Double(index) / Double(particleCount)) * 2 * .pi
         let radius: CGFloat = isAnimating ? CGFloat(80 + (index % 3) * 25) : 0
         return CGSize(
-            width: cos(angle) * radius,
-            height: sin(angle) * radius
+            width: CGFloat(cos(angle)) * radius,
+            height: CGFloat(sin(angle)) * radius
         )
     }
 }
