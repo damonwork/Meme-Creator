@@ -76,6 +76,7 @@ struct MemeCanvasView: View {
             ForEach(textLayers) { layer in
                 if !layer.text.isEmpty {
                     MemeTextView(layer: layer, highQualityStroke: isExporting)
+                        .id(layerRenderKey(layer))
                         .offset(layer.position)
                         .rotationEffect(.degrees(layer.rotation))
                 }
@@ -87,6 +88,10 @@ struct MemeCanvasView: View {
                 .cornerRadius(15)
                 .shadow(radius: 5)
         }
+    }
+
+    private func layerRenderKey(_ layer: MemeTextLayer) -> String {
+        "\(layer.id.uuidString)-\(layer.text)-\(Int(layer.fontSize))-\(layer.fontName)-\(debugColorRGBA(layer.textColor))-\(debugColorRGBA(layer.strokeColor))-\(Int(layer.position.width))-\(Int(layer.position.height))-\(Int(layer.rotation))"
     }
 }
 
@@ -161,12 +166,14 @@ struct TextLayerEditor: View {
     @Binding var layer: MemeTextLayer
     let focusedLayerID: FocusState<UUID?>.Binding
     let onDelete: () -> Void
+    let onApply: () -> Void
 
     private var fillColorBinding: Binding<Color> {
         Binding(
             get: { layer.textColor },
             set: { newValue in
                 layer.textColor = newValue
+                onApply()
                 debugLogThrottled(
                     "text-fill-color-\(layer.id.uuidString)",
                     interval: 0.2,
@@ -181,6 +188,7 @@ struct TextLayerEditor: View {
             get: { layer.strokeColor },
             set: { newValue in
                 layer.strokeColor = newValue
+                onApply()
                 debugLogThrottled(
                     "text-stroke-color-\(layer.id.uuidString)",
                     interval: 0.2,
@@ -201,6 +209,7 @@ struct TextLayerEditor: View {
                     .textInputAutocapitalization(.characters)
                     .submitLabel(.done)
                     .onChange(of: layer.text) { _, newValue in
+                        onApply()
                         debugLogThrottled(
                             "text-input-\(layer.id.uuidString)",
                             "Text layer updated: id=\(layer.id.uuidString.prefix(6)) chars=\(newValue.count)"
@@ -210,6 +219,8 @@ struct TextLayerEditor: View {
                         debugLog("Text field focus changed: id=\(layer.id.uuidString.prefix(6)) focused=\(isFocused)")
                     }
                     .onSubmit {
+                        focusedLayerID.wrappedValue = nil
+                        onApply()
                         debugLog("Text field submit: id=\(layer.id.uuidString.prefix(6))")
                     }
                     .accessibilityLabel("Meme text input")
@@ -220,6 +231,7 @@ struct TextLayerEditor: View {
                         focusedLayerID.wrappedValue = nil
                     }
                     onDelete()
+                    onApply()
                 } label: {
                     Image(systemName: "trash")
                         .font(.body)
@@ -251,6 +263,7 @@ struct TextLayerEditor: View {
                 }
                 .pickerStyle(.menu)
                 .onChange(of: layer.fontName) { _, newValue in
+                    onApply()
                     debugLog("Text style changed: id=\(layer.id.uuidString.prefix(6)) font=\(newValue)")
                 }
                 .accessibilityLabel("Font selector")
@@ -266,6 +279,7 @@ struct TextLayerEditor: View {
                 
                 Slider(value: $layer.fontSize, in: 16...120, step: 1)
                     .onChange(of: layer.fontSize) { _, newValue in
+                        onApply()
                         debugLogThrottled(
                             "text-font-size-\(layer.id.uuidString)",
                             interval: 0.2,
@@ -304,6 +318,14 @@ struct TextLayerEditor: View {
                 }
                 
                 Spacer()
+
+                Button("Apply") {
+                    focusedLayerID.wrappedValue = nil
+                    onApply()
+                    debugLog("Text style apply tapped: id=\(layer.id.uuidString.prefix(6))")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             }
         }
         .padding(12)

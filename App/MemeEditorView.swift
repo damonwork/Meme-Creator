@@ -36,6 +36,7 @@ struct MemeEditorView: View {
     @State private var pandaCacheTask: Task<Void, Never>?
     @State private var cachedPandaURL: URL?
     @State private var pandaImageLoadError = false
+    @State private var renderRevision = 0
     @FocusState private var focusedTextLayerID: UUID?
     
     var body: some View {
@@ -251,6 +252,7 @@ struct MemeEditorView: View {
 
                 if let layer = textLayers.first, !layer.text.isEmpty {
                     MemeTextView(layer: layer)
+                        .id(layerRenderKey(layer))
                         .offset(
                             selectedLayerID == layer.id
                             ? CGSize(
@@ -455,6 +457,9 @@ struct MemeEditorView: View {
                         focusedLayerID: $focusedTextLayerID,
                         onDelete: {
                             deleteTextLayer(withID: layerID)
+                        },
+                        onApply: {
+                            forceCanvasRefresh(reason: "editor-apply")
                         }
                     )
                 }
@@ -513,6 +518,7 @@ struct MemeEditorView: View {
                 selectedLayerID = nil
             }
         }
+        forceCanvasRefresh(reason: "delete")
 
         debugLog("Delete applied. Active layer reset to defaults")
     }
@@ -762,6 +768,15 @@ struct MemeEditorView: View {
             interval: 0.25,
             "Canvas reflection [\(reason)]: id=\(layer.id.uuidString.prefix(6)) visible=\(!layer.text.isEmpty) fill=\(debugColorRGBA(layer.textColor)) stroke=\(debugColorRGBA(layer.strokeColor)) size=\(Int(layer.fontSize)) font=\(layer.fontName)"
         )
+    }
+
+    private func forceCanvasRefresh(reason: String) {
+        renderRevision &+= 1
+        debugLogThrottled("force-canvas-refresh", interval: 0.2, "Force canvas refresh [\(reason)] rev=\(renderRevision)")
+    }
+
+    private func layerRenderKey(_ layer: MemeTextLayer) -> String {
+        "\(layer.id.uuidString)-\(layer.text)-\(Int(layer.fontSize))-\(layer.fontName)-\(debugColorRGBA(layer.textColor))-\(debugColorRGBA(layer.strokeColor))-\(Int(layer.position.width))-\(Int(layer.position.height))-\(Int(layer.rotation))-rev\(renderRevision)"
     }
 }
 
