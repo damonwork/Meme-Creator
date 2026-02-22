@@ -18,8 +18,8 @@ struct MemeEditorView: View {
     
     // Text layers
     @State private var textLayers: [MemeTextLayer] = [
-        MemeTextLayer(text: "", position: CGSize(width: 0, height: -120)),
-        MemeTextLayer(text: "", position: CGSize(width: 0, height: 120))
+        MemeTextLayer(text: "", position: CGSize(width: 0, height: -70)),
+        MemeTextLayer(text: "", position: CGSize(width: 0, height: 70))
     ]
     
     // Drag state
@@ -88,10 +88,11 @@ struct MemeEditorView: View {
     
     @ViewBuilder
     private func portraitLayout(geometry: GeometryProxy) -> some View {
+        let safeCanvasWidth = max(geometry.size.width - 32, 200)
         ScrollView {
             VStack(spacing: 16) {
                 // Canvas
-                memeCanvas(maxWidth: geometry.size.width - 32)
+                memeCanvas(maxWidth: safeCanvasWidth)
                     .padding(.top, 8)
                 
                 // Action buttons
@@ -114,9 +115,10 @@ struct MemeEditorView: View {
     
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
+        let safeCanvasWidth = max(geometry.size.width * 0.55, 200)
         HStack(spacing: 16) {
             // Canvas on the left
-            memeCanvas(maxWidth: geometry.size.width * 0.55)
+            memeCanvas(maxWidth: safeCanvasWidth)
                 .padding(.leading, 16)
             
             // Controls on the right
@@ -139,22 +141,23 @@ struct MemeEditorView: View {
     
     @ViewBuilder
     private func memeCanvas(maxWidth: CGFloat) -> some View {
-        let canvasHeight = min(maxWidth, 500.0)
+        let safeWidth = max(maxWidth, 200)
+        let canvasHeight = max(min(safeWidth, 500.0), 200)
         
         ZStack {
             if useCustomImage, let customImage {
                 MemeCanvasView(
                     uiImage: customImage,
                     textLayers: textLayers,
-                    canvasSize: CGSize(width: maxWidth, height: canvasHeight)
+                    canvasSize: CGSize(width: safeWidth, height: canvasHeight)
                 )
             } else if fetcher.isLoading {
-                loadingView(size: CGSize(width: maxWidth, height: canvasHeight))
+                loadingView(size: CGSize(width: safeWidth, height: canvasHeight))
             } else if let errorMsg = fetcher.errorMessage {
-                errorView(message: errorMsg, size: CGSize(width: maxWidth, height: canvasHeight))
+                errorView(message: errorMsg, size: CGSize(width: safeWidth, height: canvasHeight))
             } else {
                 // Use AsyncImage for panda images
-                pandaCanvasView(maxWidth: maxWidth, maxHeight: canvasHeight)
+                pandaCanvasView(maxWidth: safeWidth, maxHeight: canvasHeight)
             }
             
             // Drag overlay for text repositioning
@@ -169,8 +172,14 @@ struct MemeEditorView: View {
                             .onEnded { value in
                                 if let id = selectedLayerID,
                                    let index = textLayers.firstIndex(where: { $0.id == id }) {
-                                    textLayers[index].position.width += value.translation.width
-                                    textLayers[index].position.height += value.translation.height
+                                    let movedPosition = CGSize(
+                                        width: textLayers[index].position.width + value.translation.width,
+                                        height: textLayers[index].position.height + value.translation.height
+                                    )
+                                    textLayers[index].position = clampedPosition(
+                                        movedPosition,
+                                        in: CGSize(width: safeWidth, height: canvasHeight)
+                                    )
                                 }
                                 dragOffset = .zero
                                 selectedLayerID = nil
@@ -178,7 +187,7 @@ struct MemeEditorView: View {
                     )
             }
         }
-        .frame(maxWidth: maxWidth, minHeight: 200, maxHeight: canvasHeight)
+        .frame(maxWidth: safeWidth, minHeight: 200, maxHeight: canvasHeight)
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
@@ -470,8 +479,8 @@ struct MemeEditorView: View {
     private func resetEditor() {
         withAnimation(.spring(response: 0.4)) {
             textLayers = [
-                MemeTextLayer(text: "", position: CGSize(width: 0, height: -120)),
-                MemeTextLayer(text: "", position: CGSize(width: 0, height: 120))
+                MemeTextLayer(text: "", position: CGSize(width: 0, height: -70)),
+                MemeTextLayer(text: "", position: CGSize(width: 0, height: 70))
             ]
             customImage = nil
             useCustomImage = false
@@ -480,6 +489,18 @@ struct MemeEditorView: View {
             cachedPandaImage = nil
         }
         debugLog("Editor reset")
+    }
+
+    private func clampedPosition(_ position: CGSize, in canvasSize: CGSize) -> CGSize {
+        let horizontalPadding: CGFloat = 24
+        let verticalPadding: CGFloat = 24
+        let maxX = max(canvasSize.width / 2 - horizontalPadding, 0)
+        let maxY = max(canvasSize.height / 2 - verticalPadding, 0)
+
+        return CGSize(
+            width: min(max(position.width, -maxX), maxX),
+            height: min(max(position.height, -maxY), maxY)
+        )
     }
     
     @MainActor
