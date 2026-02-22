@@ -85,6 +85,12 @@ struct MemeEditorView: View {
                 debugLog("Text layers count reached 0, restoring default layer")
                 return
             }
+            if newCount > 1, let firstLayer = textLayers.first {
+                textLayers = [firstLayer]
+                selectedLayerID = nil
+                debugLog("Text layers count exceeded 1, keeping first layer only")
+                return
+            }
             if let focusedTextLayerID,
                !textLayers.contains(where: { $0.id == focusedTextLayerID }) {
                 self.focusedTextLayerID = nil
@@ -238,26 +244,24 @@ struct MemeEditorView: View {
                     .cornerRadius(15)
                     .shadow(radius: 5)
 
-                ForEach(textLayers) { layer in
-                    if !layer.text.isEmpty {
-                        MemeTextView(layer: layer)
-                            .offset(
-                                selectedLayerID == layer.id
-                                ? CGSize(
-                                    width: layer.position.width + dragOffset.width,
-                                    height: layer.position.height + dragOffset.height
-                                )
-                                : layer.position
+                if let layer = textLayers.first, !layer.text.isEmpty {
+                    MemeTextView(layer: layer)
+                        .offset(
+                            selectedLayerID == layer.id
+                            ? CGSize(
+                                width: layer.position.width + dragOffset.width,
+                                height: layer.position.height + dragOffset.height
                             )
-                            .rotationEffect(.degrees(layer.rotation))
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) {
-                                    selectedLayerID = selectedLayerID == layer.id ? nil : layer.id
-                                }
+                            : layer.position
+                        )
+                        .rotationEffect(.degrees(layer.rotation))
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) {
+                                selectedLayerID = selectedLayerID == layer.id ? nil : layer.id
                             }
-                            .scaleEffect(selectedLayerID == layer.id ? 1.05 : 1.0)
-                            .animation(.spring(response: 0.3), value: selectedLayerID)
-                    }
+                        }
+                        .scaleEffect(selectedLayerID == layer.id ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3), value: selectedLayerID)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -418,10 +422,8 @@ struct MemeEditorView: View {
     
     private var textLayerEditors: some View {
         VStack(spacing: 8) {
-            ForEach($textLayers) { $layer in
-                let layerID = layer.id
-                let layerNumber = textLayers.firstIndex(where: { $0.id == layerID }).map { $0 + 1 } ?? 1
-
+            if !textLayers.isEmpty {
+                let layerID = textLayers[0].id
                 HStack(alignment: .top, spacing: 8) {
                     Button {
                         withAnimation(.spring(response: 0.3)) {
@@ -433,12 +435,12 @@ struct MemeEditorView: View {
                             .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
                             .frame(width: 32, height: 32)
                     }
-                    .accessibilityLabel("Move text layer \(layerNumber)")
+                    .accessibilityLabel("Move text layer 1")
                     .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
                     .padding(.top, 14)
 
                     TextLayerEditor(
-                        layer: $layer,
+                        layer: $textLayers[0],
                         focusedLayerID: $focusedTextLayerID,
                         onDelete: {
                             deleteTextLayer(withID: layerID)
@@ -476,24 +478,23 @@ struct MemeEditorView: View {
     // MARK: - Actions
 
     private func deleteTextLayer(withID id: UUID) {
+        guard textLayers.indices.contains(0) else {
+            textLayers = [MemeTextLayer(text: "", position: defaultTextPosition)]
+            return
+        }
+
         focusedTextLayerID = nil
 
         withAnimation(.spring(response: 0.3)) {
-            guard let index = textLayers.firstIndex(where: { $0.id == id }) else { return }
-
-            if textLayers.count == 1 {
-                textLayers[index].text = ""
-                textLayers[index].fontSize = 48
-                textLayers[index].fontName = "Impact"
-                textLayers[index].textColor = .white
-                textLayers[index].strokeColor = .black
-                textLayers[index].strokeWidth = 2
-                textLayers[index].position = defaultTextPosition
-                textLayers[index].rotation = 0
-                textLayers[index].alignment = .center
-            } else {
-                textLayers.remove(at: index)
-            }
+            textLayers[0].text = ""
+            textLayers[0].fontSize = 48
+            textLayers[0].fontName = "Impact"
+            textLayers[0].textColor = .white
+            textLayers[0].strokeColor = .black
+            textLayers[0].strokeWidth = 2
+            textLayers[0].position = defaultTextPosition
+            textLayers[0].rotation = 0
+            textLayers[0].alignment = .center
 
             if selectedLayerID == id {
                 selectedLayerID = nil
