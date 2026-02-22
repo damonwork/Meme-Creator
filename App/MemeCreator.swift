@@ -1,99 +1,48 @@
 /*
-See the License.txt file for this sample’s licensing information.
+See the License.txt file for this sample's licensing information.
 */
 
 import SwiftUI
 
-struct MemeCreator: View, Sendable {
+/// Main content view with tab-based navigation
+struct MemeCreator: View {
     @EnvironmentObject var fetcher: PandaCollectionFetcher
+    @State private var selectedTab = 0
     
-    @State private var memeText = ""
-    @State private var textSize = 60.0
-    @State private var textColor = Color.white
-
-    @FocusState private var isFocused: Bool
-
     var body: some View {
-        VStack(alignment: .center) {
-            Spacer()
-            LoadableImage(imageMetadata: fetcher.currentPanda)
-                .overlay(alignment: .bottom) {
-                    TextField(
-                        "Meme Text",
-                        text: $memeText,
-                        prompt: Text("")
-                    )
-                    .focused($isFocused)
-                    .font(.system(size: textSize, weight: .heavy))
-                    .shadow(radius: 10)
-                    .foregroundColor(textColor)
-                    .padding()
-                    .multilineTextAlignment(.center)
-                }
-                .frame(minHeight: 150)
-
-            Spacer()
+        TabView(selection: $selectedTab) {
+            // Editor Tab
+            NavigationStack {
+                MemeEditorView()
+            }
+            .tabItem {
+                Label("Editor", systemImage: "wand.and.stars")
+            }
+            .tag(0)
             
-            if !memeText.isEmpty {
-                VStack {
-                    HStack {
-                        Text("Font Size")
-                            .fontWeight(.semibold)
-                        Slider(value: $textSize, in: 20...140)
-                    }
-                    
-                    HStack {
-                        Text("Font Color")
-                            .fontWeight(.semibold)
-                        ColorPicker("Font Color", selection: $textColor)
-                            .labelsHidden()
-                            .frame(width: 124, height: 23, alignment: .leading)
-                        Spacer()
-                    }
-                }
-                .padding(.vertical)
-                .frame(maxWidth: 325)
-                
+            // Templates Tab
+            NavigationStack {
+                TemplatesView()
             }
-
-            HStack {
-                Button {
-                    if let randomImage = fetcher.imageData.sample.randomElement() {
-                        fetcher.currentPanda = randomImage
-                    }
-                } label: {
-                    VStack {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.largeTitle)
-                            .padding(.bottom, 4)
-                        Text("Shuffle Photo")
-                    }
-                    .frame(maxWidth: 180, maxHeight: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-
-                Button {
-                    isFocused = true
-                } label: {
-                    VStack {
-                        Image(systemName: "textformat")
-                            .font(.largeTitle)
-                            .padding(.bottom, 4)
-                        Text("Add Text")
-                    }
-                    .frame(maxWidth: 180, maxHeight: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+            .tabItem {
+                Label("Templates", systemImage: "square.grid.2x2")
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxHeight: 180, alignment: .center)
+            .tag(1)
+            
+            // Gallery Tab
+            NavigationStack {
+                MemeGalleryView()
+            }
+            .tabItem {
+                Label("My Memes", systemImage: "photo.stack")
+            }
+            .tag(2)
         }
-        .padding()
-        .task {
-            try? await fetcher.fetchData()
-        }
-        .navigationTitle("Meme Creator")
+        .sensoryFeedback(.selection, trigger: selectedTab)
     }
+}
+
+#Preview {
+    MemeCreator()
+        .environmentObject(PandaCollectionFetcher())
 }
