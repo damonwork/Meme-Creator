@@ -97,6 +97,10 @@ struct MemeEditorView: View {
             }
             debugLog("Text layers count changed: \(newCount)")
         }
+        .onChange(of: activeLayerDebugFingerprint) { _, newValue in
+            guard !newValue.isEmpty else { return }
+            debugLogThrottled("active-layer-fingerprint", interval: 0.25, "Layer state changed: \(newValue)")
+        }
         .onAppear {
             cachePandaImage()
             debugLog("Editor appeared. Initial layers=\(textLayers.count) customImage=\(useCustomImage)")
@@ -223,6 +227,7 @@ struct MemeEditorView: View {
                                         movedPosition,
                                         in: CGSize(width: safeWidth, height: canvasHeight)
                                     )
+                                    debugLog("Layer moved: id=\(id.uuidString.prefix(6)) pos=(\(Int(textLayers[index].position.width)),\(Int(textLayers[index].position.height)))")
                                 }
                                 dragOffset = .zero
                                 selectedLayerID = nil
@@ -267,6 +272,12 @@ struct MemeEditorView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Meme canvas with \(fetcher.currentPanda.description)")
             .accessibilityHint("Tap on text to select it for repositioning")
+            .onAppear {
+                logCanvasReflection(reason: "canvas-appear")
+            }
+            .onChange(of: activeLayerDebugFingerprint) { _, _ in
+                logCanvasReflection(reason: "canvas-layer-change")
+            }
         } else if pandaImageLoadError {
             errorView(
                 message: "Failed to load image",
@@ -480,10 +491,12 @@ struct MemeEditorView: View {
     private func deleteTextLayer(withID id: UUID) {
         guard textLayers.indices.contains(0) else {
             textLayers = [MemeTextLayer(text: "", position: defaultTextPosition)]
+            debugLog("Delete requested with no layer available, restored default layer")
             return
         }
 
         focusedTextLayerID = nil
+        debugLog("Delete requested for layer \(id.uuidString.prefix(6))")
 
         withAnimation(.spring(response: 0.3)) {
             textLayers[0].text = ""
@@ -500,6 +513,8 @@ struct MemeEditorView: View {
                 selectedLayerID = nil
             }
         }
+
+        debugLog("Delete applied. Active layer reset to defaults")
     }
     
     private func loadCustomImage(from item: PhotosPickerItem?) {
@@ -725,6 +740,28 @@ struct MemeEditorView: View {
             }
             debugLog("Save meme succeeded")
         }
+    }
+
+    private var activeLayerDebugFingerprint: String {
+        guard let layer = textLayers.first else { return "" }
+
+        return "id=\(layer.id.uuidString.prefix(6)) textChars=\(layer.text.count) "
+        + "font=\(layer.fontName) size=\(Int(layer.fontSize)) "
+        + "fill=\(debugColorRGBA(layer.textColor)) stroke=\(debugColorRGBA(layer.strokeColor)) "
+        + "pos=(\(Int(layer.position.width)),\(Int(layer.position.height)))"
+    }
+
+    private func logCanvasReflection(reason: String) {
+        guard let layer = textLayers.first else {
+            debugLogThrottled("canvas-reflect-empty", interval: 0.4, "Canvas reflection [\(reason)]: no-layer")
+            return
+        }
+
+        debugLogThrottled(
+            "canvas-reflect-\(reason)",
+            interval: 0.25,
+            "Canvas reflection [\(reason)]: id=\(layer.id.uuidString.prefix(6)) visible=\(!layer.text.isEmpty) fill=\(debugColorRGBA(layer.textColor)) stroke=\(debugColorRGBA(layer.strokeColor)) size=\(Int(layer.fontSize)) font=\(layer.fontName)"
+        )
     }
 }
 

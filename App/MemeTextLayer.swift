@@ -161,6 +161,34 @@ struct TextLayerEditor: View {
     @Binding var layer: MemeTextLayer
     let focusedLayerID: FocusState<UUID?>.Binding
     let onDelete: () -> Void
+
+    private var fillColorBinding: Binding<Color> {
+        Binding(
+            get: { layer.textColor },
+            set: { newValue in
+                layer.textColor = newValue
+                debugLogThrottled(
+                    "text-fill-color-\(layer.id.uuidString)",
+                    interval: 0.2,
+                    "Text style changed: id=\(layer.id.uuidString.prefix(6)) fill=\(debugColorRGBA(newValue))"
+                )
+            }
+        )
+    }
+
+    private var strokeColorBinding: Binding<Color> {
+        Binding(
+            get: { layer.strokeColor },
+            set: { newValue in
+                layer.strokeColor = newValue
+                debugLogThrottled(
+                    "text-stroke-color-\(layer.id.uuidString)",
+                    interval: 0.2,
+                    "Text style changed: id=\(layer.id.uuidString.prefix(6)) stroke=\(debugColorRGBA(newValue))"
+                )
+            }
+        )
+    }
     
     var body: some View {
         VStack(spacing: 12) {
@@ -222,6 +250,9 @@ struct TextLayerEditor: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .onChange(of: layer.fontName) { _, newValue in
+                    debugLog("Text style changed: id=\(layer.id.uuidString.prefix(6)) font=\(newValue)")
+                }
                 .accessibilityLabel("Font selector")
             }
             
@@ -234,6 +265,13 @@ struct TextLayerEditor: View {
                     .frame(width: 50, alignment: .leading)
                 
                 Slider(value: $layer.fontSize, in: 16...120, step: 1)
+                    .onChange(of: layer.fontSize) { _, newValue in
+                        debugLogThrottled(
+                            "text-font-size-\(layer.id.uuidString)",
+                            interval: 0.2,
+                            "Text style changed: id=\(layer.id.uuidString.prefix(6)) size=\(Int(newValue))"
+                        )
+                    }
                     .accessibilityLabel("Font size")
                     .accessibilityValue("\(Int(layer.fontSize)) points")
                 
@@ -250,7 +288,7 @@ struct TextLayerEditor: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-                    ColorPicker("", selection: $layer.textColor)
+                    ColorPicker("", selection: fillColorBinding)
                         .labelsHidden()
                         .accessibilityLabel("Text fill color")
                 }
@@ -260,7 +298,7 @@ struct TextLayerEditor: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-                    ColorPicker("", selection: $layer.strokeColor)
+                    ColorPicker("", selection: strokeColorBinding)
                         .labelsHidden()
                         .accessibilityLabel("Text stroke color")
                 }

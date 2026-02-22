@@ -1,4 +1,6 @@
 import Foundation
+import SwiftUI
+import UIKit
 
 func debugLog(_ message: @autoclosure () -> String) {
 #if DEBUG
@@ -16,6 +18,26 @@ func debugLogThrottled(
     guard DebugLogThrottleStore.shared.shouldLog(key: key, interval: interval) else { return }
     debugLog(message())
 #endif
+}
+
+func debugColorRGBA(_ color: Color) -> String {
+    let uiColor = UIColor(color)
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+        return "unresolved"
+    }
+
+    return String(
+        format: "rgba(%.2f,%.2f,%.2f,%.2f)",
+        red,
+        green,
+        blue,
+        alpha
+    )
 }
 
 #if DEBUG
