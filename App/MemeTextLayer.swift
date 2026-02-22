@@ -343,77 +343,82 @@ struct TextLayerEditor: View {
     // MARK: - Colors and Actions
 
     private var colorsAndActionsSection: some View {
-        HStack(spacing: 14) {
-            // Fill color
-            HStack(spacing: 6) {
-                VStack(spacing: 2) {
-                    Text("Fill")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                }
-                ColorPicker("", selection: fillColorBinding)
-                    .labelsHidden()
-                    .accessibilityLabel("Text fill color")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                colorChip(title: "Fill", selection: fillColorBinding, accessibilityLabel: "Text fill color")
+                colorChip(title: "Stroke", selection: strokeColorBinding, accessibilityLabel: "Text stroke color")
+                Spacer(minLength: 8)
+                applyButton
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.35))
-            )
-            
-            // Stroke color
-            HStack(spacing: 6) {
-                VStack(spacing: 2) {
-                    Text("Stroke")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                }
-                ColorPicker("", selection: strokeColorBinding)
-                    .labelsHidden()
-                    .accessibilityLabel("Text stroke color")
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.systemBackground).opacity(0.35))
-            )
-            
-            Spacer()
 
-            // Apply button with gradient
-            Button {
-                focusedLayerID.wrappedValue = nil
-                onApply()
-                debugLog("Text style apply tapped: id=\(layer.id.uuidString.prefix(6))")
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                    Text("Apply")
-                        .font(.caption)
-                        .fontWeight(.bold)
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    colorChip(title: "Fill", selection: fillColorBinding, accessibilityLabel: "Text fill color")
+                    colorChip(title: "Stroke", selection: strokeColorBinding, accessibilityLabel: "Text stroke color")
+                    Spacer(minLength: 0)
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
-                .background(
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.blue, Color(red: 0.35, green: 0.55, blue: 1.0)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
-                )
+
+                HStack {
+                    Spacer(minLength: 0)
+                    applyButton
+                }
             }
-            .buttonStyle(GlassPressButtonStyle())
         }
+    }
+
+    private func colorChip(title: String, selection: Binding<Color>, accessibilityLabel: String) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .textCase(.uppercase)
+                .fixedSize(horizontal: true, vertical: false)
+
+            ColorPicker("", selection: selection)
+                .labelsHidden()
+                .accessibilityLabel(accessibilityLabel)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.systemBackground).opacity(0.35))
+        )
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var applyButton: some View {
+        Button {
+            focusedLayerID.wrappedValue = nil
+            onApply()
+            debugLog("Text style apply tapped: id=\(layer.id.uuidString.prefix(6))")
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                Text("Apply")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            .background(
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.blue, Color(red: 0.35, green: 0.55, blue: 1.0)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+            )
+        }
+        .buttonStyle(GlassPressButtonStyle())
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
