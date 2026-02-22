@@ -198,68 +198,74 @@ struct TextLayerEditor: View {
                 }
                 .accessibilityLabel("Delete text layer")
             }
-            
-            if !layer.text.isEmpty {
-                // Font picker
-                HStack {
-                    Text("Font")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 50, alignment: .leading)
-                    
-                    Picker("Font", selection: $layer.fontName) {
-                        ForEach(MemeTextLayer.availableFonts, id: \.name) { font in
-                            Text(font.displayName)
-                                .tag(font.name)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityLabel("Font selector")
-                }
-                
-                // Font size
-                HStack {
-                    Text("Size")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 50, alignment: .leading)
-                    
-                    Slider(value: $layer.fontSize, in: 16...120, step: 1)
-                        .accessibilityLabel("Font size")
-                        .accessibilityValue("\(Int(layer.fontSize)) points")
-                    
-                    Text("\(Int(layer.fontSize))")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .frame(width: 30)
-                }
-                
-                // Colors
-                HStack(spacing: 16) {
-                    HStack(spacing: 6) {
-                        Text("Fill")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                        ColorPicker("", selection: $layer.textColor)
-                            .labelsHidden()
-                            .accessibilityLabel("Text fill color")
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Text("Stroke")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                        ColorPicker("", selection: $layer.strokeColor)
-                            .labelsHidden()
-                            .accessibilityLabel("Text stroke color")
-                    }
-                    
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
+                    Button("Done") {
+                        focusedLayerID.wrappedValue = nil
+                    }
                 }
+            }
+            
+            // Font picker
+            HStack {
+                Text("Font")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 50, alignment: .leading)
+                
+                Picker("Font", selection: $layer.fontName) {
+                    ForEach(MemeTextLayer.availableFonts, id: \.name) { font in
+                        Text(font.displayName)
+                            .tag(font.name)
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityLabel("Font selector")
+            }
+            
+            // Font size
+            HStack {
+                Text("Size")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 50, alignment: .leading)
+                
+                Slider(value: $layer.fontSize, in: 16...120, step: 1)
+                    .accessibilityLabel("Font size")
+                    .accessibilityValue("\(Int(layer.fontSize)) points")
+                
+                Text("\(Int(layer.fontSize))")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .frame(width: 30)
+            }
+            
+            // Colors
+            HStack(spacing: 16) {
+                HStack(spacing: 6) {
+                    Text("Fill")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    ColorPicker("", selection: $layer.textColor)
+                        .labelsHidden()
+                        .accessibilityLabel("Text fill color")
+                }
+                
+                HStack(spacing: 6) {
+                    Text("Stroke")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                    ColorPicker("", selection: $layer.strokeColor)
+                        .labelsHidden()
+                        .accessibilityLabel("Text stroke color")
+                }
+                
+                Spacer()
             }
         }
         .padding(12)

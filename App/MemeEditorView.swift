@@ -9,6 +9,7 @@ import SwiftData
 struct MemeEditorView: View {
     @EnvironmentObject var fetcher: PandaCollectionFetcher
     @Environment(\.modelContext) private var modelContext
+    private let defaultTextPosition = CGSize(width: 0, height: 80)
     
     // Image state
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -18,7 +19,7 @@ struct MemeEditorView: View {
     
     // Text layers
     @State private var textLayers: [MemeTextLayer] = [
-        MemeTextLayer(text: "", position: CGSize(width: 0, height: 0))
+        MemeTextLayer(text: "", position: CGSize(width: 0, height: 80))
     ]
     
     // Drag state
@@ -79,6 +80,11 @@ struct MemeEditorView: View {
             }
         }
         .onChange(of: textLayers.count) { _, newCount in
+            if newCount == 0 {
+                textLayers = [MemeTextLayer(text: "", position: defaultTextPosition)]
+                debugLog("Text layers count reached 0, restoring default layer")
+                return
+            }
             if let focusedTextLayerID,
                !textLayers.contains(where: { $0.id == focusedTextLayerID }) {
                 self.focusedTextLayerID = nil
@@ -137,7 +143,7 @@ struct MemeEditorView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
-        .scrollDismissesKeyboard(.never)
+        .scrollDismissesKeyboard(.interactively)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showControls)
         .safeAreaPadding(.bottom, 8)
     }
@@ -164,7 +170,7 @@ struct MemeEditorView: View {
                 .padding(.trailing, 16)
                 .padding(.vertical, 8)
             }
-            .scrollDismissesKeyboard(.never)
+            .scrollDismissesKeyboard(.interactively)
         }
     }
     
@@ -349,22 +355,6 @@ struct MemeEditorView: View {
                 .accessibilityLabel("Import photo")
                 .accessibilityHint("Choose a photo from your library")
                 
-                // Add text layer
-                ActionButton(
-                    icon: "textformat.size",
-                    label: "Add Text",
-                    action: {
-                        let newLayer = MemeTextLayer()
-                        withAnimation(.spring(response: 0.3)) {
-                            textLayers.append(newLayer)
-                            showControls = true
-                        }
-                        focusedTextLayerID = newLayer.id
-                    }
-                )
-                .accessibilityLabel("Add text layer")
-                .accessibilityHint("Add a new text overlay to the meme")
-                
                 // Toggle controls
                 ActionButton(
                     icon: showControls ? "slider.horizontal.below.rectangle" : "slider.horizontal.3",
@@ -428,34 +418,32 @@ struct MemeEditorView: View {
     
     private var textLayerEditors: some View {
         VStack(spacing: 8) {
-            ForEach(textLayers) { layer in
-                if let index = textLayers.firstIndex(where: { $0.id == layer.id }) {
-                    let layerID = textLayers[index].id
-                    let layerNumber = index + 1
+            ForEach($textLayers) { $layer in
+                let layerID = layer.id
+                let layerNumber = textLayers.firstIndex(where: { $0.id == layerID }).map { $0 + 1 } ?? 1
 
-                    HStack(alignment: .top, spacing: 8) {
-                        Button {
-                            withAnimation(.spring(response: 0.3)) {
-                                selectedLayerID = selectedLayerID == layerID ? nil : layerID
-                            }
-                        } label: {
-                            Image(systemName: selectedLayerID == layerID ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
-                                .font(.title3)
-                                .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
-                                .frame(width: 32, height: 32)
+                HStack(alignment: .top, spacing: 8) {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            selectedLayerID = selectedLayerID == layerID ? nil : layerID
                         }
-                        .accessibilityLabel("Move text layer \(layerNumber)")
-                        .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
-                        .padding(.top, 14)
-
-                        TextLayerEditor(
-                            layer: $textLayers[index],
-                            focusedLayerID: $focusedTextLayerID,
-                            onDelete: {
-                                deleteTextLayer(withID: layerID)
-                            }
-                        )
+                    } label: {
+                        Image(systemName: selectedLayerID == layerID ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
+                            .font(.title3)
+                            .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
+                            .frame(width: 32, height: 32)
                     }
+                    .accessibilityLabel("Move text layer \(layerNumber)")
+                    .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
+                    .padding(.top, 14)
+
+                    TextLayerEditor(
+                        layer: $layer,
+                        focusedLayerID: $focusedTextLayerID,
+                        onDelete: {
+                            deleteTextLayer(withID: layerID)
+                        }
+                    )
                 }
             }
         }
@@ -490,27 +478,25 @@ struct MemeEditorView: View {
     private func deleteTextLayer(withID id: UUID) {
         focusedTextLayerID = nil
 
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.3)) {
-                guard let index = textLayers.firstIndex(where: { $0.id == id }) else { return }
+        withAnimation(.spring(response: 0.3)) {
+            guard let index = textLayers.firstIndex(where: { $0.id == id }) else { return }
 
-                if textLayers.count == 1 {
-                    textLayers[index].text = ""
-                    textLayers[index].fontSize = 48
-                    textLayers[index].fontName = "Impact"
-                    textLayers[index].textColor = .white
-                    textLayers[index].strokeColor = .black
-                    textLayers[index].strokeWidth = 2
-                    textLayers[index].position = .zero
-                    textLayers[index].rotation = 0
-                    textLayers[index].alignment = .center
-                } else {
-                    textLayers.remove(at: index)
-                }
+            if textLayers.count == 1 {
+                textLayers[index].text = ""
+                textLayers[index].fontSize = 48
+                textLayers[index].fontName = "Impact"
+                textLayers[index].textColor = .white
+                textLayers[index].strokeColor = .black
+                textLayers[index].strokeWidth = 2
+                textLayers[index].position = defaultTextPosition
+                textLayers[index].rotation = 0
+                textLayers[index].alignment = .center
+            } else {
+                textLayers.remove(at: index)
+            }
 
-                if selectedLayerID == id {
-                    selectedLayerID = nil
-                }
+            if selectedLayerID == id {
+                selectedLayerID = nil
             }
         }
     }
@@ -593,7 +579,7 @@ struct MemeEditorView: View {
 
         withAnimation(.spring(response: 0.4)) {
             textLayers = [
-                MemeTextLayer(text: "", position: CGSize(width: 0, height: 0))
+                MemeTextLayer(text: "", position: defaultTextPosition)
             ]
             customImage = nil
             useCustomImage = false
