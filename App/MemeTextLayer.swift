@@ -159,8 +159,8 @@ struct MemeTextView: View {
 /// The text layer editor panel
 struct TextLayerEditor: View {
     @Binding var layer: MemeTextLayer
+    let focusedLayerID: FocusState<UUID?>.Binding
     let onDelete: () -> Void
-    @FocusState private var isTextFocused: Bool
     
     var body: some View {
         VStack(spacing: 12) {
@@ -168,7 +168,8 @@ struct TextLayerEditor: View {
             HStack {
                 TextField("Enter meme text", text: $layer.text)
                     .textFieldStyle(.roundedBorder)
-                    .focused($isTextFocused)
+                    .focused(focusedLayerID, equals: layer.id)
+                    .keyboardType(.asciiCapable)
                     .autocorrectionDisabled(true)
                     .textInputAutocapitalization(.characters)
                     .submitLabel(.done)
@@ -178,17 +179,20 @@ struct TextLayerEditor: View {
                             "Text layer updated: id=\(layer.id.uuidString.prefix(6)) chars=\(newValue.count)"
                         )
                     }
-                    .onChange(of: isTextFocused) { _, isFocused in
+                    .onChange(of: focusedLayerID.wrappedValue == layer.id) { _, isFocused in
                         debugLog("Text field focus changed: id=\(layer.id.uuidString.prefix(6)) focused=\(isFocused)")
                     }
                     .onSubmit {
-                        isTextFocused = false
+                        focusedLayerID.wrappedValue = nil
                         debugLog("Text field submit: id=\(layer.id.uuidString.prefix(6))")
                     }
                     .accessibilityLabel("Meme text input")
                     .accessibilityHint("Type your meme text here")
                 
                 Button(role: .destructive) {
+                    if focusedLayerID.wrappedValue == layer.id {
+                        focusedLayerID.wrappedValue = nil
+                    }
                     onDelete()
                 } label: {
                     Image(systemName: "trash")

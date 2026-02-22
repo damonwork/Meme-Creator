@@ -32,6 +32,10 @@ struct MemeEditorView: View {
     @State private var savedSuccessfully = false
     @State private var shareImage: UIImage?
     @State private var isSaving = false
+    @State private var pandaCacheTask: Task<Void, Never>?
+    @State private var cachedPandaURL: URL?
+    @State private var pandaImageLoadError = false
+    @FocusState private var focusedTextLayerID: UUID?
     
     var body: some View {
         GeometryReader { geometry in
@@ -57,24 +61,37 @@ struct MemeEditorView: View {
             }
         }
         .onChange(of: selectedPhotoItem) { _, newItem in
+            focusedTextLayerID = nil
             loadCustomImage(from: newItem)
         }
         .onChange(of: fetcher.currentPanda) { _, _ in
-            // Cache panda image when it changes
+            focusedTextLayerID = nil
+            selectedLayerID = nil
+            pandaImageLoadError = false
             cachePandaImage()
         }
         .onChange(of: selectedLayerID) { _, newValue in
             if let newValue {
+                focusedTextLayerID = nil
                 debugLog("Move mode enabled for layer \(newValue.uuidString.prefix(6))")
             } else {
                 debugLog("Move mode disabled")
             }
         }
         .onChange(of: textLayers.count) { _, newCount in
+            if let focusedTextLayerID,
+               !textLayers.contains(where: { $0.id == focusedTextLayerID }) {
+                self.focusedTextLayerID = nil
+            }
             debugLog("Text layers count changed: \(newCount)")
         }
         .onAppear {
+            cachePandaImage()
             debugLog("Editor appeared. Initial layers=\(textLayers.count) customImage=\(useCustomImage)")
+        }
+        .onDisappear {
+            pandaCacheTask?.cancel()
+            pandaCacheTask = nil
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -170,7 +187,7 @@ struct MemeEditorView: View {
             } else if let errorMsg = fetcher.errorMessage {
                 errorView(message: errorMsg, size: CGSize(width: safeWidth, height: canvasHeight))
             } else {
-                // Use AsyncImage for panda images
+                // Use the pre-cached panda image for smoother updates
                 pandaCanvasView(maxWidth: safeWidth, maxHeight: canvasHeight)
             }
             
@@ -207,56 +224,50 @@ struct MemeEditorView: View {
     
     @ViewBuilder
     private func pandaCanvasView(maxWidth: CGFloat, maxHeight: CGFloat) -> some View {
-        AsyncImage(url: fetcher.currentPanda.imageUrl) { phase in
-            switch phase {
-            case .success(let image):
-                ZStack {
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .cornerRadius(15)
-                        .shadow(radius: 5)
-                    
-                    ForEach(textLayers) { layer in
-                        if !layer.text.isEmpty {
-                            MemeTextView(layer: layer)
-                                .offset(
-                                    selectedLayerID == layer.id
-                                    ? CGSize(
-                                        width: layer.position.width + dragOffset.width,
-                                        height: layer.position.height + dragOffset.height
-                                    )
-                                    : layer.position
+        if let cachedPandaImage {
+            ZStack {
+                Image(uiImage: cachedPandaImage)
+                    .resizable()
+                    .scaledToFit()
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
+
+                ForEach(textLayers) { layer in
+                    if !layer.text.isEmpty {
+                        MemeTextView(layer: layer)
+                            .offset(
+                                selectedLayerID == layer.id
+                                ? CGSize(
+                                    width: layer.position.width + dragOffset.width,
+                                    height: layer.position.height + dragOffset.height
                                 )
-                                .rotationEffect(.degrees(layer.rotation))
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.3)) {
-                                        selectedLayerID = selectedLayerID == layer.id ? nil : layer.id
-                                    }
+                                : layer.position
+                            )
+                            .rotationEffect(.degrees(layer.rotation))
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3)) {
+                                    selectedLayerID = selectedLayerID == layer.id ? nil : layer.id
                                 }
-                                .scaleEffect(selectedLayerID == layer.id ? 1.05 : 1.0)
-                                .animation(.spring(response: 0.3), value: selectedLayerID)
-                        }
+                            }
+                            .scaleEffect(selectedLayerID == layer.id ? 1.05 : 1.0)
+                            .animation(.spring(response: 0.3), value: selectedLayerID)
                     }
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Meme canvas with \(fetcher.currentPanda.description)")
-                .accessibilityHint("Tap on text to select it for repositioning")
-                
-            case .failure:
-                errorView(
-                    message: "Failed to load image",
-                    size: CGSize(width: maxWidth, height: maxHeight)
-                )
-                
-            case .empty:
-                loadingView(size: CGSize(width: maxWidth, height: maxHeight))
-                
-            @unknown default:
-                EmptyView()
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Meme canvas with \(fetcher.currentPanda.description)")
+            .accessibilityHint("Tap on text to select it for repositioning")
+        } else if pandaImageLoadError {
+            errorView(
+                message: "Failed to load image",
+                size: CGSize(width: maxWidth, height: maxHeight)
+            )
+        } else {
+            loadingView(size: CGSize(width: maxWidth, height: maxHeight))
+                .task {
+                    cachePandaImage()
+                }
         }
-        .animation(.easeInOut(duration: 0.3), value: fetcher.currentPanda.imageUrl)
     }
     
     @ViewBuilder
@@ -290,8 +301,13 @@ struct MemeEditorView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                     Button("Retry") {
-                        Task {
-                            await fetcher.fetchData()
+                        if fetcher.errorMessage != nil {
+                            Task {
+                                await fetcher.fetchData()
+                            }
+                        } else {
+                            pandaImageLoadError = false
+                            cachePandaImage()
                         }
                     }
                     .buttonStyle(.bordered)
@@ -314,6 +330,8 @@ struct MemeEditorView: View {
                     icon: "photo.on.rectangle.angled",
                     label: "Shuffle",
                     action: {
+                        focusedTextLayerID = nil
+                        selectedLayerID = nil
                         withAnimation(.spring(response: 0.4)) {
                             useCustomImage = false
                             fetcher.shufflePanda()
@@ -336,10 +354,12 @@ struct MemeEditorView: View {
                     icon: "textformat.size",
                     label: "Add Text",
                     action: {
+                        let newLayer = MemeTextLayer()
                         withAnimation(.spring(response: 0.3)) {
-                            textLayers.append(MemeTextLayer())
+                            textLayers.append(newLayer)
                             showControls = true
                         }
+                        focusedTextLayerID = newLayer.id
                     }
                 )
                 .accessibilityLabel("Add text layer")
@@ -350,6 +370,9 @@ struct MemeEditorView: View {
                     icon: showControls ? "slider.horizontal.below.rectangle" : "slider.horizontal.3",
                     label: showControls ? "Hide" : "Controls",
                     action: {
+                        if showControls {
+                            focusedTextLayerID = nil
+                        }
                         withAnimation(.spring(response: 0.3)) {
                             showControls.toggle()
                         }
@@ -378,6 +401,7 @@ struct MemeEditorView: View {
     private var toolbarButtons: some View {
         // Save button
         Button {
+            focusedTextLayerID = nil
             saveMeme()
         } label: {
             Image(systemName: "square.and.arrow.down")
@@ -388,6 +412,7 @@ struct MemeEditorView: View {
         
         // Share button
         Button {
+            focusedTextLayerID = nil
             Task {
                 await prepareShareImage()
             }
@@ -403,34 +428,34 @@ struct MemeEditorView: View {
     
     private var textLayerEditors: some View {
         VStack(spacing: 8) {
-            ForEach(textLayers.indices, id: \.self) { index in
-                let layerID = textLayers[index].id
-                HStack(alignment: .top, spacing: 8) {
-                    Button {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedLayerID = selectedLayerID == layerID ? nil : layerID
-                        }
-                    } label: {
-                        Image(systemName: selectedLayerID == layerID ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
-                            .font(.title3)
-                            .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
-                            .frame(width: 32, height: 32)
-                    }
-                    .accessibilityLabel("Move text layer \(index + 1)")
-                    .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
-                    .padding(.top, 14)
+            ForEach(textLayers) { layer in
+                if let index = textLayers.firstIndex(where: { $0.id == layer.id }) {
+                    let layerID = textLayers[index].id
+                    let layerNumber = index + 1
 
-                    TextLayerEditor(
-                        layer: $textLayers[index],
-                        onDelete: {
+                    HStack(alignment: .top, spacing: 8) {
+                        Button {
                             withAnimation(.spring(response: 0.3)) {
-                                textLayers.remove(at: index)
-                                if selectedLayerID == layerID {
-                                    selectedLayerID = nil
-                                }
+                                selectedLayerID = selectedLayerID == layerID ? nil : layerID
                             }
+                        } label: {
+                            Image(systemName: selectedLayerID == layerID ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
+                                .font(.title3)
+                                .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
+                                .frame(width: 32, height: 32)
                         }
-                    )
+                        .accessibilityLabel("Move text layer \(layerNumber)")
+                        .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
+                        .padding(.top, 14)
+
+                        TextLayerEditor(
+                            layer: $textLayers[index],
+                            focusedLayerID: $focusedTextLayerID,
+                            onDelete: {
+                                deleteTextLayer(withID: layerID)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -461,9 +486,41 @@ struct MemeEditorView: View {
     }
     
     // MARK: - Actions
+
+    private func deleteTextLayer(withID id: UUID) {
+        focusedTextLayerID = nil
+
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.3)) {
+                guard let index = textLayers.firstIndex(where: { $0.id == id }) else { return }
+
+                if textLayers.count == 1 {
+                    textLayers[index].text = ""
+                    textLayers[index].fontSize = 48
+                    textLayers[index].fontName = "Impact"
+                    textLayers[index].textColor = .white
+                    textLayers[index].strokeColor = .black
+                    textLayers[index].strokeWidth = 2
+                    textLayers[index].position = .zero
+                    textLayers[index].rotation = 0
+                    textLayers[index].alignment = .center
+                } else {
+                    textLayers.remove(at: index)
+                }
+
+                if selectedLayerID == id {
+                    selectedLayerID = nil
+                }
+            }
+        }
+    }
     
     private func loadCustomImage(from item: PhotosPickerItem?) {
         guard let item else { return }
+        focusedTextLayerID = nil
+        selectedLayerID = nil
+        pandaCacheTask?.cancel()
+        pandaCacheTask = nil
         debugLog("Import photo started")
         
         Task {
@@ -483,17 +540,57 @@ struct MemeEditorView: View {
     }
     
     private func cachePandaImage() {
-        guard let url = fetcher.currentPanda.imageUrl else { return }
-        Task {
-            if let (data, _) = try? await URLSession.shared.data(from: url),
-               let image = UIImage(data: data) {
-                cachedPandaImage = image
-                debugLog("Template image cached")
+        guard let url = fetcher.currentPanda.imageUrl else {
+            pandaCacheTask?.cancel()
+            pandaCacheTask = nil
+            cachedPandaImage = nil
+            cachedPandaURL = nil
+            pandaImageLoadError = false
+            return
+        }
+
+        if cachedPandaURL == url {
+            if cachedPandaImage != nil || pandaCacheTask != nil {
+                return
+            }
+        } else {
+            pandaCacheTask?.cancel()
+            pandaCacheTask = nil
+        }
+
+        pandaImageLoadError = false
+        cachedPandaImage = nil
+        cachedPandaURL = url
+
+        pandaCacheTask = Task(priority: .userInitiated) {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard !Task.isCancelled, let image = UIImage(data: data) else { return }
+
+                await MainActor.run {
+                    guard fetcher.currentPanda.imageUrl == url else { return }
+                    pandaCacheTask = nil
+                    cachedPandaImage = image
+                    pandaImageLoadError = false
+                    debugLog("Template image cached")
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard fetcher.currentPanda.imageUrl == url else { return }
+                    pandaCacheTask = nil
+                    pandaImageLoadError = true
+                    debugLogThrottled("template-cache-failed", interval: 1.5, "Template image cache failed")
+                }
             }
         }
     }
     
     private func resetEditor() {
+        focusedTextLayerID = nil
+        pandaCacheTask?.cancel()
+        pandaCacheTask = nil
+
         withAnimation(.spring(response: 0.4)) {
             textLayers = [
                 MemeTextLayer(text: "", position: CGSize(width: 0, height: 0))
@@ -503,7 +600,10 @@ struct MemeEditorView: View {
             selectedLayerID = nil
             selectedPhotoItem = nil
             cachedPandaImage = nil
+            cachedPandaURL = nil
+            pandaImageLoadError = false
         }
+        cachePandaImage()
         debugLog("Editor reset")
     }
 
@@ -539,7 +639,8 @@ struct MemeEditorView: View {
         }
         
         // Use cached image or download
-        if let cached = cachedPandaImage {
+        if let cached = cachedPandaImage,
+           cachedPandaURL == fetcher.currentPanda.imageUrl {
             return cached
         }
         
@@ -551,10 +652,12 @@ struct MemeEditorView: View {
         }
         
         cachedPandaImage = downloadedImage
+        cachedPandaURL = url
         return downloadedImage
     }
     
     private func prepareShareImage() async {
+        focusedTextLayerID = nil
         debugLog("Share preparation started")
         isSaving = true
         defer { isSaving = false }
@@ -578,6 +681,7 @@ struct MemeEditorView: View {
     }
     
     private func saveMeme() {
+        focusedTextLayerID = nil
         debugLog("Save meme started")
         isSaving = true
         
