@@ -380,7 +380,8 @@ struct MemeEditorView: View {
     
     private var textLayerEditors: some View {
         VStack(spacing: 8) {
-            ForEach(Array(textLayers.enumerated()), id: \.element.id) { index, layer in
+            ForEach(Array(textLayers.indices), id: \.self) { index in
+                let layer = textLayers[index]
                 HStack(alignment: .top, spacing: 8) {
                     // Drag handle
                     Button {
