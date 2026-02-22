@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+Icon\r
+Thumbs.db
+
+# Xcode
+# User settings
+*.xcuserstate
+xcuserdata/
+
+# Xcode workspace/ide files
+*.xcworkspace
+*.xcodeproj/project.xcworkspace/
+
+# Build products
+build/
+*.xcarchive
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Assets
+*.xcassets
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment / Secrets
+.env
+
+# Logs
+*.log
+
+# Temporary files
+*.swp
