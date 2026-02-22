@@ -19,6 +19,7 @@
 		A1000000000000000000000A /* SavedMeme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* SavedMeme.swift */; };
 		A1000000000000000000000B /* LoadableImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* LoadableImage.swift */; };
 		A1000000000000000000000C /* PhotoLibrarySaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* PhotoLibrarySaver.swift */; };
+		A10000000000000000000010 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* DebugLog.swift */; };
 		A1000000000000000000000D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +36,7 @@
 		A2000000000000000000000A /* SavedMeme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMeme.swift; sourceTree = "<group>"; };
 		A2000000000000000000000B /* LoadableImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadableImage.swift; sourceTree = "<group>"; };
 		A2000000000000000000000C /* PhotoLibrarySaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibrarySaver.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* DebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLog.swift; sourceTree = "<group>"; };
 		A2000000000000000000000D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A2000000000000000000000E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A2000000000000000000000F /* MemeCreator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = MemeCreator.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,6 +76,7 @@
 				A2000000000000000000000A /* SavedMeme.swift */,
 				A2000000000000000000000B /* LoadableImage.swift */,
 				A2000000000000000000000C /* PhotoLibrarySaver.swift */,
+				A20000000000000000000010 /* DebugLog.swift */,
 				A2000000000000000000000D /* Assets.xcassets */,
 				A2000000000000000000000E /* Info.plist */,
 			);
@@ -170,6 +173,7 @@
 				A1000000000000000000000A /* SavedMeme.swift in Sources */,
 				A1000000000000000000000B /* LoadableImage.swift in Sources */,
 				A1000000000000000000000C /* PhotoLibrarySaver.swift in Sources */,
+				A10000000000000000000010 /* DebugLog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

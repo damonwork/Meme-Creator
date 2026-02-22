@@ -92,6 +92,7 @@ struct TemplatesView: View {
                                     fetcher.currentPanda = panda
                                     selectedPanda = panda
                                 }
+                                debugLog("Template selected: \(panda.description)")
                             }
                             .accessibilityLabel(panda.description)
                             .accessibilityHint("Tap to use this image as your meme template")

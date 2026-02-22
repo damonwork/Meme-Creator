@@ -31,10 +31,12 @@ class PandaCollectionFetcher: ObservableObject {
     }
     
     func fetchData() async {
+        debugLog("Panda fetch started")
         isLoading = true
         errorMessage = nil
         
         guard let url = URL(string: urlString) else {
+            debugLog("Panda fetch failed: invalid URL")
             errorMessage = "Invalid URL configuration."
             isLoading = false
             return
@@ -65,12 +67,16 @@ class PandaCollectionFetcher: ObservableObject {
             if let first = fixedSamples.first {
                 currentPanda = first
             }
+            debugLog("Panda fetch succeeded: \(fixedSamples.count) templates loaded")
         } catch is URLError {
             errorMessage = FetchError.noConnection.errorDescription
+            debugLog("Panda fetch failed: no connection")
         } catch let error as FetchError {
             errorMessage = error.errorDescription
+            debugLog("Panda fetch failed: \(error.localizedDescription)")
         } catch {
             errorMessage = FetchError.badJSON.errorDescription
+            debugLog("Panda fetch failed: JSON decode error")
         }
         
         isLoading = false
@@ -83,6 +89,7 @@ class PandaCollectionFetcher: ObservableObject {
     func shufflePanda() {
         if let randomPanda = imageData.sample.randomElement() {
             currentPanda = randomPanda
+            debugLog("Template shuffled: \(randomPanda.description)")
         }
     }
 }

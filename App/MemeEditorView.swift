@@ -73,6 +73,14 @@ struct MemeEditorView: View {
                 savedOverlay
             }
         }
+        .sheet(isPresented: Binding(
+            get: { shareImage != nil },
+            set: { if !$0 { shareImage = nil } }
+        )) {
+            if let shareImage {
+                ShareSheetView(image: shareImage)
+            }
+        }
         .sensoryFeedback(.success, trigger: savedSuccessfully)
     }
     
@@ -366,43 +374,37 @@ struct MemeEditorView: View {
         .disabled(isSaving)
         .accessibilityLabel("Share meme")
         .accessibilityHint("Share the meme with others")
-        .sheet(isPresented: Binding(
-            get: { shareImage != nil },
-            set: { if !$0 { shareImage = nil } }
-        )) {
-            if let shareImage {
-                ShareSheetView(image: shareImage)
-            }
-        }
     }
     
     // MARK: - Text Layer Editors
     
     private var textLayerEditors: some View {
         VStack(spacing: 8) {
-            ForEach(Array(textLayers.indices), id: \.self) { index in
-                let layer = textLayers[index]
+            ForEach(textLayers.indices, id: \.self) { index in
+                let layerID = textLayers[index].id
                 HStack(alignment: .top, spacing: 8) {
-                    // Drag handle
                     Button {
                         withAnimation(.spring(response: 0.3)) {
-                            selectedLayerID = selectedLayerID == layer.id ? nil : layer.id
+                            selectedLayerID = selectedLayerID == layerID ? nil : layerID
                         }
                     } label: {
-                        Image(systemName: selectedLayerID == layer.id ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
+                        Image(systemName: selectedLayerID == layerID ? "arrow.up.and.down.and.arrow.left.and.right" : "move.3d")
                             .font(.title3)
-                            .foregroundStyle(selectedLayerID == layer.id ? .blue : .secondary)
+                            .foregroundStyle(selectedLayerID == layerID ? .blue : .secondary)
                             .frame(width: 32, height: 32)
                     }
                     .accessibilityLabel("Move text layer \(index + 1)")
-                    .accessibilityHint(selectedLayerID == layer.id ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
+                    .accessibilityHint(selectedLayerID == layerID ? "Currently in move mode. Drag on canvas to reposition." : "Tap to enter move mode")
                     .padding(.top, 14)
-                    
+
                     TextLayerEditor(
                         layer: $textLayers[index],
                         onDelete: {
                             withAnimation(.spring(response: 0.3)) {
                                 textLayers.remove(at: index)
+                                if selectedLayerID == layerID {
+                                    selectedLayerID = nil
+                                }
                             }
                         }
                     )
@@ -437,6 +439,7 @@ struct MemeEditorView: View {
     
     private func loadCustomImage(from item: PhotosPickerItem?) {
         guard let item else { return }
+        debugLog("Import photo started")
         
         Task {
             if let data = try? await item.loadTransferable(type: Data.self),
@@ -445,9 +448,11 @@ struct MemeEditorView: View {
                     customImage = image
                     useCustomImage = true
                 }
+                debugLog("Import photo succeeded")
             } else {
                 errorMessage = "Failed to load the selected image."
                 showError = true
+                debugLog("Import photo failed")
             }
         }
     }
@@ -474,6 +479,7 @@ struct MemeEditorView: View {
             selectedPhotoItem = nil
             cachedPandaImage = nil
         }
+        debugLog("Editor reset")
     }
     
     @MainActor
@@ -512,25 +518,30 @@ struct MemeEditorView: View {
     }
     
     private func prepareShareImage() async {
+        debugLog("Share preparation started")
         isSaving = true
         defer { isSaving = false }
         
         guard let backgroundImage = await getBackgroundImage() else {
             errorMessage = "Failed to load the image for sharing."
             showError = true
+            debugLog("Share preparation failed: background image unavailable")
             return
         }
         
         guard let rendered = renderMemeWithImage(backgroundImage) else {
             errorMessage = "Failed to render the meme for sharing."
             showError = true
+            debugLog("Share preparation failed: render error")
             return
         }
         
         shareImage = rendered
+        debugLog("Share preparation succeeded")
     }
     
     private func saveMeme() {
+        debugLog("Save meme started")
         isSaving = true
         
         Task { @MainActor in
@@ -539,6 +550,7 @@ struct MemeEditorView: View {
             guard let backgroundImage = await getBackgroundImage() else {
                 errorMessage = "Failed to load the image."
                 showError = true
+                debugLog("Save meme failed: background image unavailable")
                 return
             }
             
@@ -546,6 +558,7 @@ struct MemeEditorView: View {
                   let imageData = finalImage.jpegData(compressionQuality: 0.9) else {
                 errorMessage = "Failed to render the meme image."
                 showError = true
+                debugLog("Save meme failed: render/jpeg conversion")
                 return
             }
             
@@ -555,7 +568,10 @@ struct MemeEditorView: View {
                     Task { @MainActor in
                         errorMessage = "Could not save to Photos: \(error.localizedDescription)"
                         showError = true
+                        debugLog("Save to Photos failed: \(error.localizedDescription)")
                     }
+                } else {
+                    debugLog("Save to Photos succeeded")
                 }
             }
             
@@ -572,12 +588,14 @@ struct MemeEditorView: View {
                 modelContext.delete(savedMeme)
                 errorMessage = "Could not save meme data: \(error.localizedDescription)"
                 showError = true
+                debugLog("Save meme failed: SwiftData save error \(error.localizedDescription)")
                 return
             }
 
             withAnimation(.spring(response: 0.3)) {
                 savedSuccessfully = true
             }
+            debugLog("Save meme succeeded")
         }
     }
 }

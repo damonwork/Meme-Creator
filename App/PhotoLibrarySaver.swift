@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 final class PhotoLibrarySaver: NSObject {
     static let shared = PhotoLibrarySaver()
 
@@ -8,6 +9,7 @@ final class PhotoLibrarySaver: NSObject {
     func save(_ image: UIImage, completion: @escaping (Error?) -> Void) {
         let token = UUID().uuidString
         completions[token] = completion
+        debugLog("PhotoLibrarySaver queued save request")
         let context = Unmanaged.passRetained(token as NSString).toOpaque()
         UIImageWriteToSavedPhotosAlbum(
             image,
@@ -26,6 +28,11 @@ final class PhotoLibrarySaver: NSObject {
         guard let contextInfo else { return }
         let token = Unmanaged<NSString>.fromOpaque(contextInfo).takeRetainedValue() as String
         let completion = completions.removeValue(forKey: token)
+        if let error {
+            debugLog("PhotoLibrarySaver finished with error: \(error.localizedDescription)")
+        } else {
+            debugLog("PhotoLibrarySaver finished successfully")
+        }
         completion?(error)
     }
 }

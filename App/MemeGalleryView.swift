@@ -129,13 +129,16 @@ struct MemeGalleryView: View {
     }
     
     private func deleteMeme(_ meme: SavedMeme) {
+        debugLog("Delete meme requested: \(meme.title)")
         withAnimation(.spring(response: 0.3)) {
             modelContext.delete(meme)
 
             do {
                 try modelContext.save()
+                debugLog("Delete meme succeeded: \(meme.title)")
             } catch {
                 persistenceErrorMessage = "Could not delete meme: \(error.localizedDescription)"
+                debugLog("Delete meme failed: \(error.localizedDescription)")
             }
         }
     }
@@ -208,6 +211,7 @@ struct MemeDetailView: View {
                         // Share
                         Button {
                             shareImage = uiImage
+                            debugLog("Share from detail opened: \(meme.title)")
                         } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: "square.and.arrow.up")
@@ -224,6 +228,7 @@ struct MemeDetailView: View {
                         Button {
                             UIPasteboard.general.image = uiImage
                             copiedToClipboard.toggle()
+                            debugLog("Copied meme to clipboard: \(meme.title)")
                         } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: copiedToClipboard ? "checkmark" : "doc.on.doc")
@@ -243,8 +248,10 @@ struct MemeDetailView: View {
                                 Task { @MainActor in
                                     if let error {
                                         saveErrorMessage = "Could not save to Photos: \(error.localizedDescription)"
+                                        debugLog("Detail save to Photos failed: \(error.localizedDescription)")
                                     } else {
                                         savedToPhotos.toggle()
+                                        debugLog("Detail save to Photos succeeded: \(meme.title)")
                                     }
                                 }
                             }

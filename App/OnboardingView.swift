@@ -35,7 +35,8 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             // Pages
             TabView(selection: $currentPage) {
-                ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
+                ForEach(pages.indices, id: \.self) { index in
+                    let page = pages[index]
                     onboardingPage(icon: page.icon, title: page.title, description: page.description)
                         .tag(index)
                 }
@@ -50,10 +51,12 @@ struct OnboardingView: View {
                         withAnimation(.spring(response: 0.4)) {
                             currentPage += 1
                         }
+                        debugLog("Onboarding next: page \(currentPage + 1)")
                     } else {
                         withAnimation(.easeOut(duration: 0.3)) {
                             hasSeenOnboarding = true
                         }
+                        debugLog("Onboarding completed")
                     }
                 } label: {
                     Text(currentPage < pages.count - 1 ? "Next" : "Get Started")
@@ -70,6 +73,7 @@ struct OnboardingView: View {
                         withAnimation(.easeOut(duration: 0.3)) {
                             hasSeenOnboarding = true
                         }
+                        debugLog("Onboarding skipped")
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
