@@ -38,6 +38,10 @@ struct MemeCreator: View {
             }
             .tag(2)
         }
+        .background(GlassBackground())
+        .tint(Color(red: 0.16, green: 0.43, blue: 0.78))
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .sensoryFeedback(.selection, trigger: selectedTab)
     }
 }

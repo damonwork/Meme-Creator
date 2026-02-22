@@ -29,6 +29,7 @@ struct MemeGalleryView: View {
         }
         .navigationTitle("My Memes")
         .navigationBarTitleDisplayMode(.inline)
+        .background(GlassBackground())
         .sheet(item: $selectedMeme) { meme in
             MemeDetailView(meme: meme, onDelete: {
                 deleteMeme(meme)
@@ -83,6 +84,9 @@ struct MemeGalleryView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
+        .padding(24)
+        .glassCard(cornerRadius: 20)
+        .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("No saved memes. Create and save memes in the editor to see them here.")
@@ -181,7 +185,12 @@ struct MemeGridItem: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(6)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.28), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 5)
     }
 }
 
@@ -289,6 +298,7 @@ struct MemeDetailView: View {
                 
                 Spacer()
             }
+            .background(GlassBackground())
             .navigationTitle(meme.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

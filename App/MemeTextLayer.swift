@@ -75,7 +75,7 @@ struct MemeCanvasView: View {
             // Text layers
             ForEach(textLayers) { layer in
                 if !layer.text.isEmpty {
-                    MemeTextView(layer: layer)
+                    MemeTextView(layer: layer, highQualityStroke: isExporting)
                         .offset(layer.position)
                         .rotationEffect(.degrees(layer.rotation))
                 }
@@ -93,22 +93,43 @@ struct MemeCanvasView: View {
 /// Individual meme text with stroke effect
 struct MemeTextView: View {
     let layer: MemeTextLayer
+    let highQualityStroke: Bool
+
+    init(layer: MemeTextLayer, highQualityStroke: Bool = false) {
+        self.layer = layer
+        self.highQualityStroke = highQualityStroke
+    }
+
+    private var strokeOffsets: [CGSize] {
+        let width = layer.strokeWidth
+        var offsets: [CGSize] = [
+            CGSize(width: width, height: 0),
+            CGSize(width: -width, height: 0),
+            CGSize(width: 0, height: width),
+            CGSize(width: 0, height: -width)
+        ]
+
+        if highQualityStroke {
+            offsets.append(contentsOf: [
+                CGSize(width: width, height: width),
+                CGSize(width: -width, height: -width),
+                CGSize(width: width, height: -width),
+                CGSize(width: -width, height: width)
+            ])
+        }
+
+        return offsets
+    }
     
     var body: some View {
         ZStack {
-            // Stroke (rendered as multiple shadows for outline effect)
-            Text(layer.text)
-                .font(.custom(layer.fontName, size: layer.fontSize))
-                .fontWeight(.heavy)
-                .foregroundColor(layer.strokeColor)
-                .shadow(color: layer.strokeColor, radius: 0, x: layer.strokeWidth, y: 0)
-                .shadow(color: layer.strokeColor, radius: 0, x: -layer.strokeWidth, y: 0)
-                .shadow(color: layer.strokeColor, radius: 0, x: 0, y: layer.strokeWidth)
-                .shadow(color: layer.strokeColor, radius: 0, x: 0, y: -layer.strokeWidth)
-                .shadow(color: layer.strokeColor, radius: 0, x: layer.strokeWidth, y: layer.strokeWidth)
-                .shadow(color: layer.strokeColor, radius: 0, x: -layer.strokeWidth, y: -layer.strokeWidth)
-                .shadow(color: layer.strokeColor, radius: 0, x: layer.strokeWidth, y: -layer.strokeWidth)
-                .shadow(color: layer.strokeColor, radius: 0, x: -layer.strokeWidth, y: layer.strokeWidth)
+            ForEach(Array(strokeOffsets.enumerated()), id: \.offset) { _, offset in
+                Text(layer.text)
+                    .font(.custom(layer.fontName, size: layer.fontSize))
+                    .fontWeight(.heavy)
+                    .foregroundColor(layer.strokeColor)
+                    .offset(offset)
+            }
             
             // Fill
             Text(layer.text)
@@ -134,6 +155,8 @@ struct TextLayerEditor: View {
                 TextField("Enter meme text", text: $layer.text)
                     .textFieldStyle(.roundedBorder)
                     .focused($isTextFocused)
+                    .autocorrectionDisabled(true)
+                    .textInputAutocapitalization(.characters)
                     .submitLabel(.done)
                     .onSubmit {
                         isTextFocused = false
@@ -214,7 +237,7 @@ struct TextLayerEditor: View {
             }
         }
         .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .glassCard(cornerRadius: 14)
     }
 }
 

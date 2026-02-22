@@ -24,6 +24,7 @@ struct TemplatesView: View {
         }
         .navigationTitle("Templates")
         .navigationBarTitleDisplayMode(.inline)
+        .background(GlassBackground())
         .task {
             if fetcher.imageData.sample.count <= 1 {
                 await fetcher.fetchData()
@@ -80,6 +81,9 @@ struct TemplatesView: View {
                 Text("Choose a panda image to use as your meme background")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .glassCard(cornerRadius: 14)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 
@@ -150,14 +154,12 @@ struct TemplateGridItem: View {
                 .foregroundStyle(.secondary)
         }
         .padding(6)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-        )
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isSelected ? Color.accentColor : Color.white.opacity(0.25), lineWidth: isSelected ? 2 : 1)
         )
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 5)
     }
     
     @ViewBuilder

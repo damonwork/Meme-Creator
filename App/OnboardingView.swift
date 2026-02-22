@@ -82,6 +82,7 @@ struct OnboardingView: View {
             }
             .padding(.bottom, 40)
         }
+        .background(GlassBackground())
     }
     
     @ViewBuilder
@@ -106,6 +107,8 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
             }
+            .padding(22)
+            .glassCard(cornerRadius: 24)
             
             Spacer()
             Spacer()
