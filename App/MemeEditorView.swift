@@ -137,7 +137,7 @@ struct MemeEditorView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.never)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showControls)
         .safeAreaPadding(.bottom, 8)
     }
@@ -164,7 +164,7 @@ struct MemeEditorView: View {
                 .padding(.trailing, 16)
                 .padding(.vertical, 8)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.never)
         }
     }
     

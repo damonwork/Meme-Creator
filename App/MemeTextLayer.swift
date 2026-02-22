@@ -169,7 +169,6 @@ struct TextLayerEditor: View {
                 TextField("Enter meme text", text: $layer.text)
                     .textFieldStyle(.roundedBorder)
                     .focused(focusedLayerID, equals: layer.id)
-                    .keyboardType(.asciiCapable)
                     .autocorrectionDisabled(true)
                     .textInputAutocapitalization(.characters)
                     .submitLabel(.done)
@@ -183,7 +182,6 @@ struct TextLayerEditor: View {
                         debugLog("Text field focus changed: id=\(layer.id.uuidString.prefix(6)) focused=\(isFocused)")
                     }
                     .onSubmit {
-                        focusedLayerID.wrappedValue = nil
                         debugLog("Text field submit: id=\(layer.id.uuidString.prefix(6))")
                     }
                     .accessibilityLabel("Meme text input")
