@@ -120,22 +120,36 @@ struct MemeTextView: View {
 
         return offsets
     }
+
+    private var previewStrokeOffset: CGFloat {
+        max(layer.strokeWidth * 0.7, 1)
+    }
     
     var body: some View {
-        ZStack {
-            ForEach(Array(strokeOffsets.enumerated()), id: \.offset) { _, offset in
+        Group {
+            if highQualityStroke {
+                ZStack {
+                    ForEach(Array(strokeOffsets.enumerated()), id: \.offset) { _, offset in
+                        Text(layer.text)
+                            .font(.custom(layer.fontName, size: layer.fontSize))
+                            .fontWeight(.heavy)
+                            .foregroundColor(layer.strokeColor)
+                            .offset(offset)
+                    }
+
+                    Text(layer.text)
+                        .font(.custom(layer.fontName, size: layer.fontSize))
+                        .fontWeight(.heavy)
+                        .foregroundColor(layer.textColor)
+                }
+            } else {
                 Text(layer.text)
                     .font(.custom(layer.fontName, size: layer.fontSize))
                     .fontWeight(.heavy)
-                    .foregroundColor(layer.strokeColor)
-                    .offset(offset)
+                    .foregroundColor(layer.textColor)
+                    .shadow(color: layer.strokeColor.opacity(0.95), radius: 0, x: previewStrokeOffset, y: previewStrokeOffset)
+                    .shadow(color: layer.strokeColor.opacity(0.95), radius: 0, x: -previewStrokeOffset, y: -previewStrokeOffset)
             }
-            
-            // Fill
-            Text(layer.text)
-                .font(.custom(layer.fontName, size: layer.fontSize))
-                .fontWeight(.heavy)
-                .foregroundColor(layer.textColor)
         }
         .multilineTextAlignment(layer.alignment)
         .padding(.horizontal, 8)
@@ -158,8 +172,18 @@ struct TextLayerEditor: View {
                     .autocorrectionDisabled(true)
                     .textInputAutocapitalization(.characters)
                     .submitLabel(.done)
+                    .onChange(of: layer.text) { _, newValue in
+                        debugLogThrottled(
+                            "text-input-\(layer.id.uuidString)",
+                            "Text layer updated: id=\(layer.id.uuidString.prefix(6)) chars=\(newValue.count)"
+                        )
+                    }
+                    .onChange(of: isTextFocused) { _, isFocused in
+                        debugLog("Text field focus changed: id=\(layer.id.uuidString.prefix(6)) focused=\(isFocused)")
+                    }
                     .onSubmit {
                         isTextFocused = false
+                        debugLog("Text field submit: id=\(layer.id.uuidString.prefix(6))")
                     }
                     .accessibilityLabel("Meme text input")
                     .accessibilityHint("Type your meme text here")

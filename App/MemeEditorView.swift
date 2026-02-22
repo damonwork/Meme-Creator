@@ -18,8 +18,7 @@ struct MemeEditorView: View {
     
     // Text layers
     @State private var textLayers: [MemeTextLayer] = [
-        MemeTextLayer(text: "", position: CGSize(width: 0, height: -70)),
-        MemeTextLayer(text: "", position: CGSize(width: 0, height: 70))
+        MemeTextLayer(text: "", position: CGSize(width: 0, height: 0))
     ]
     
     // Drag state
@@ -63,6 +62,19 @@ struct MemeEditorView: View {
         .onChange(of: fetcher.currentPanda) { _, _ in
             // Cache panda image when it changes
             cachePandaImage()
+        }
+        .onChange(of: selectedLayerID) { _, newValue in
+            if let newValue {
+                debugLog("Move mode enabled for layer \(newValue.uuidString.prefix(6))")
+            } else {
+                debugLog("Move mode disabled")
+            }
+        }
+        .onChange(of: textLayers.count) { _, newCount in
+            debugLog("Text layers count changed: \(newCount)")
+        }
+        .onAppear {
+            debugLog("Editor appeared. Initial layers=\(textLayers.count) customImage=\(useCustomImage)")
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -108,7 +120,7 @@ struct MemeEditorView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
-        .scrollDismissesKeyboard(.immediately)
+        .scrollDismissesKeyboard(.interactively)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showControls)
         .safeAreaPadding(.bottom, 8)
     }
@@ -135,7 +147,7 @@ struct MemeEditorView: View {
                 .padding(.trailing, 16)
                 .padding(.vertical, 8)
             }
-            .scrollDismissesKeyboard(.immediately)
+            .scrollDismissesKeyboard(.interactively)
         }
     }
     
@@ -476,6 +488,7 @@ struct MemeEditorView: View {
             if let (data, _) = try? await URLSession.shared.data(from: url),
                let image = UIImage(data: data) {
                 cachedPandaImage = image
+                debugLog("Template image cached")
             }
         }
     }
@@ -483,8 +496,7 @@ struct MemeEditorView: View {
     private func resetEditor() {
         withAnimation(.spring(response: 0.4)) {
             textLayers = [
-                MemeTextLayer(text: "", position: CGSize(width: 0, height: -70)),
-                MemeTextLayer(text: "", position: CGSize(width: 0, height: 70))
+                MemeTextLayer(text: "", position: CGSize(width: 0, height: 0))
             ]
             customImage = nil
             useCustomImage = false
