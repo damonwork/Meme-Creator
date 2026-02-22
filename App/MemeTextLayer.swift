@@ -161,7 +161,7 @@ struct MemeTextView: View {
     }
 }
 
-/// The text layer editor panel
+/// The text layer editor panel — redesigned with modern glass sections
 struct TextLayerEditor: View {
     @Binding var layer: MemeTextLayer
     let focusedLayerID: FocusState<UUID?>.Binding
@@ -199,11 +199,31 @@ struct TextLayerEditor: View {
     }
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Text input
-            HStack {
+        VStack(spacing: 14) {
+            // Text input section
+            textInputSection
+
+            // Size section
+            sizeSection
+
+            // Colors + actions section
+            colorsAndActionsSection
+        }
+        .padding(14)
+        .glassCard(cornerRadius: 18)
+    }
+
+    // MARK: - Text Input
+
+    private var textInputSection: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "character.cursor.ibeam")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+
                 TextField("Enter meme text", text: $layer.text)
-                    .textFieldStyle(.roundedBorder)
+                    .font(.body)
                     .focused(focusedLayerID, equals: layer.id)
                     .autocorrectionDisabled(true)
                     .textInputAutocapitalization(.characters)
@@ -225,89 +245,175 @@ struct TextLayerEditor: View {
                     }
                     .accessibilityLabel("Meme text input")
                     .accessibilityHint("Type your meme text here")
-                
-                Button(role: .destructive) {
-                    if focusedLayerID.wrappedValue == layer.id {
-                        focusedLayerID.wrappedValue = nil
-                    }
-                    onDelete()
-                    onApply()
-                } label: {
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.55))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 0.8)
+            }
+
+            // Delete button
+            Button(role: .destructive) {
+                if focusedLayerID.wrappedValue == layer.id {
+                    focusedLayerID.wrappedValue = nil
+                }
+                onDelete()
+                onApply()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 36, height: 36)
+
                     Image(systemName: "trash")
-                        .font(.body)
-                }
-                .accessibilityLabel("Delete text layer")
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        focusedLayerID.wrappedValue = nil
-                    }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.red.opacity(0.8))
                 }
             }
-            
-            // Font size
-            HStack {
+            .buttonStyle(GlassPressButtonStyle())
+            .accessibilityLabel("Delete text layer")
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedLayerID.wrappedValue = nil
+                }
+            }
+        }
+    }
+
+    // MARK: - Size Section
+
+    private var sizeSection: some View {
+        HStack(spacing: 10) {
+            // Size label with icon
+            HStack(spacing: 4) {
+                Image(systemName: "textformat.size")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
                 Text("Size")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
-                    .frame(width: 50, alignment: .leading)
-                
-                Slider(value: $layer.fontSize, in: 16...120, step: 1)
-                    .onChange(of: layer.fontSize) { _, newValue in
-                        onApply()
-                        debugLogThrottled(
-                            "text-font-size-\(layer.id.uuidString)",
-                            interval: 0.2,
-                            "Text style changed: id=\(layer.id.uuidString.prefix(6)) size=\(Int(newValue))"
-                        )
-                    }
-                    .accessibilityLabel("Font size")
-                    .accessibilityValue("\(Int(layer.fontSize)) points")
-                
-                Text("\(Int(layer.fontSize))")
-                    .font(.caption)
-                    .monospacedDigit()
-                    .frame(width: 30)
             }
+            .frame(width: 52, alignment: .leading)
             
-            // Colors
-            HStack(spacing: 16) {
-                HStack(spacing: 6) {
-                    Text("Fill")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                    ColorPicker("", selection: fillColorBinding)
-                        .labelsHidden()
-                        .accessibilityLabel("Text fill color")
-                }
-                
-                HStack(spacing: 6) {
-                    Text("Stroke")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
-                    ColorPicker("", selection: strokeColorBinding)
-                        .labelsHidden()
-                        .accessibilityLabel("Text stroke color")
-                }
-                
-                Spacer()
-
-                Button("Apply") {
-                    focusedLayerID.wrappedValue = nil
+            // Custom styled slider track
+            Slider(value: $layer.fontSize, in: 16...120, step: 1)
+                .tint(
+                    LinearGradient(
+                        colors: [Color.blue, Color.cyan],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .onChange(of: layer.fontSize) { _, newValue in
                     onApply()
-                    debugLog("Text style apply tapped: id=\(layer.id.uuidString.prefix(6))")
+                    debugLogThrottled(
+                        "text-font-size-\(layer.id.uuidString)",
+                        interval: 0.2,
+                        "Text style changed: id=\(layer.id.uuidString.prefix(6)) size=\(Int(newValue))"
+                    )
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-            }
+                .accessibilityLabel("Font size")
+                .accessibilityValue("\(Int(layer.fontSize)) points")
+            
+            // Size value badge
+            Text("\(Int(layer.fontSize))")
+                .font(.caption)
+                .fontWeight(.bold)
+                .monospacedDigit()
+                .foregroundStyle(.blue)
+                .frame(width: 32)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.blue.opacity(0.1))
+                )
         }
-        .padding(12)
-        .glassCard(cornerRadius: 14)
+    }
+
+    // MARK: - Colors and Actions
+
+    private var colorsAndActionsSection: some View {
+        HStack(spacing: 14) {
+            // Fill color
+            HStack(spacing: 6) {
+                VStack(spacing: 2) {
+                    Text("Fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                }
+                ColorPicker("", selection: fillColorBinding)
+                    .labelsHidden()
+                    .accessibilityLabel("Text fill color")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.35))
+            )
+            
+            // Stroke color
+            HStack(spacing: 6) {
+                VStack(spacing: 2) {
+                    Text("Stroke")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                }
+                ColorPicker("", selection: strokeColorBinding)
+                    .labelsHidden()
+                    .accessibilityLabel("Text stroke color")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(.systemBackground).opacity(0.35))
+            )
+            
+            Spacer()
+
+            // Apply button with gradient
+            Button {
+                focusedLayerID.wrappedValue = nil
+                onApply()
+                debugLog("Text style apply tapped: id=\(layer.id.uuidString.prefix(6))")
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Apply")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue, Color(red: 0.35, green: 0.55, blue: 1.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .shadow(color: .blue.opacity(0.3), radius: 6, x: 0, y: 3)
+                )
+            }
+            .buttonStyle(GlassPressButtonStyle())
+        }
     }
 }
 
