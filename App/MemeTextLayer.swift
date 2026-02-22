@@ -247,28 +247,6 @@ struct TextLayerEditor: View {
                 }
             }
             
-            // Font picker
-            HStack {
-                Text("Font")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 50, alignment: .leading)
-                
-                Picker("Font", selection: $layer.fontName) {
-                    ForEach(MemeTextLayer.availableFonts, id: \.name) { font in
-                        Text(font.displayName)
-                            .tag(font.name)
-                    }
-                }
-                .pickerStyle(.menu)
-                .onChange(of: layer.fontName) { _, newValue in
-                    onApply()
-                    debugLog("Text style changed: id=\(layer.id.uuidString.prefix(6)) font=\(newValue)")
-                }
-                .accessibilityLabel("Font selector")
-            }
-            
             // Font size
             HStack {
                 Text("Size")

@@ -27,7 +27,6 @@ struct MemeEditorView: View {
     @State private var dragOffset: CGSize = .zero
     
     // UI state
-    @State private var showControls = true
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var savedSuccessfully = false
@@ -146,16 +145,13 @@ struct MemeEditorView: View {
                 actionButtonsRow
                 
                 // Text layer editors
-                if showControls {
-                    textLayerEditors
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+                textLayerEditors
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
         .scrollDismissesKeyboard(.interactively)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showControls)
         .safeAreaPadding(.bottom, 8)
     }
     
@@ -174,9 +170,7 @@ struct MemeEditorView: View {
                 VStack(spacing: 12) {
                     actionButtonsRow
                     
-                    if showControls {
-                        textLayerEditors
-                    }
+                    textLayerEditors
                 }
                 .padding(.trailing, 16)
                 .padding(.vertical, 8)
@@ -371,21 +365,6 @@ struct MemeEditorView: View {
                 }
                 .accessibilityLabel("Import photo")
                 .accessibilityHint("Choose a photo from your library")
-                
-                // Toggle controls
-                ActionButton(
-                    icon: showControls ? "slider.horizontal.below.rectangle" : "slider.horizontal.3",
-                    label: showControls ? "Hide" : "Controls",
-                    action: {
-                        if showControls {
-                            focusedTextLayerID = nil
-                        }
-                        withAnimation(.spring(response: 0.3)) {
-                            showControls.toggle()
-                        }
-                    }
-                )
-                .accessibilityLabel(showControls ? "Hide controls" : "Show controls")
                 
                 // Reset
                 ActionButton(
