@@ -13,6 +13,7 @@ struct MemeGalleryView: View {
     @State private var showDeleteConfirmation = false
     @State private var memeToDelete: SavedMeme?
     @State private var persistenceErrorMessage: String?
+    @State private var shareImage: UIImage?
     
     private let columns = [
         GridItem(.adaptive(minimum: 140, maximum: 200), spacing: 12)
@@ -33,6 +34,14 @@ struct MemeGalleryView: View {
                 deleteMeme(meme)
                 selectedMeme = nil
             })
+        }
+        .sheet(isPresented: Binding(
+            get: { shareImage != nil },
+            set: { if !$0 { shareImage = nil } }
+        )) {
+            if let shareImage {
+                ShareSheetView(image: shareImage)
+            }
         }
         .alert("Delete Meme", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -97,10 +106,9 @@ struct MemeGalleryView: View {
                             }
                             
                             if let uiImage = meme.uiImage {
-                                ShareLink(
-                                    item: Image(uiImage: uiImage),
-                                    preview: SharePreview(meme.title, image: Image(uiImage: uiImage))
-                                ) {
+                                Button {
+                                    shareImage = uiImage
+                                } label: {
                                     Label("Share", systemImage: "square.and.arrow.up")
                                 }
                             }
@@ -183,6 +191,7 @@ struct MemeDetailView: View {
     @State private var copiedToClipboard = false
     @State private var savedToPhotos = false
     @State private var saveErrorMessage: String?
+    @State private var shareImage: UIImage?
     
     var body: some View {
         NavigationStack {
@@ -197,10 +206,9 @@ struct MemeDetailView: View {
                     
                     HStack(spacing: 20) {
                         // Share
-                        ShareLink(
-                            item: Image(uiImage: uiImage),
-                            preview: SharePreview(meme.title, image: Image(uiImage: uiImage))
-                        ) {
+                        Button {
+                            shareImage = uiImage
+                        } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: "square.and.arrow.up")
                                     .font(.title2)
@@ -293,6 +301,14 @@ struct MemeDetailView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(saveErrorMessage ?? "")
+            }
+            .sheet(isPresented: Binding(
+                get: { shareImage != nil },
+                set: { if !$0 { shareImage = nil } }
+            )) {
+                if let shareImage {
+                    ShareSheetView(image: shareImage)
+                }
             }
         }
     }
