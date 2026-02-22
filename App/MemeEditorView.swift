@@ -549,7 +549,14 @@ struct MemeEditorView: View {
             }
             
             // Save to Photos
-            UIImageWriteToSavedPhotosAlbum(finalImage, nil, nil, nil)
+            PhotoLibrarySaver.shared.save(finalImage) { error in
+                if let error {
+                    Task { @MainActor in
+                        errorMessage = "Could not save to Photos: \(error.localizedDescription)"
+                        showError = true
+                    }
+                }
+            }
             
             // Save to SwiftData
             let savedMeme = SavedMeme(
@@ -557,7 +564,16 @@ struct MemeEditorView: View {
                 title: textLayers.first(where: { !$0.text.isEmpty })?.text ?? "Meme"
             )
             modelContext.insert(savedMeme)
-            
+
+            do {
+                try modelContext.save()
+            } catch {
+                modelContext.delete(savedMeme)
+                errorMessage = "Could not save meme data: \(error.localizedDescription)"
+                showError = true
+                return
+            }
+
             withAnimation(.spring(response: 0.3)) {
                 savedSuccessfully = true
             }

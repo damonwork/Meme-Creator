@@ -12,6 +12,7 @@ struct MemeGalleryView: View {
     @State private var selectedMeme: SavedMeme?
     @State private var showDeleteConfirmation = false
     @State private var memeToDelete: SavedMeme?
+    @State private var persistenceErrorMessage: String?
     
     private let columns = [
         GridItem(.adaptive(minimum: 140, maximum: 200), spacing: 12)
@@ -44,6 +45,17 @@ struct MemeGalleryView: View {
             }
         } message: {
             Text("Are you sure you want to delete this meme? This action cannot be undone.")
+        }
+        .alert(
+            "Storage Error",
+            isPresented: Binding(
+                get: { persistenceErrorMessage != nil },
+                set: { if !$0 { persistenceErrorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(persistenceErrorMessage ?? "")
         }
     }
     
@@ -111,6 +123,12 @@ struct MemeGalleryView: View {
     private func deleteMeme(_ meme: SavedMeme) {
         withAnimation(.spring(response: 0.3)) {
             modelContext.delete(meme)
+
+            do {
+                try modelContext.save()
+            } catch {
+                persistenceErrorMessage = "Could not delete meme: \(error.localizedDescription)"
+            }
         }
     }
 }
@@ -164,6 +182,7 @@ struct MemeDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var copiedToClipboard = false
     @State private var savedToPhotos = false
+    @State private var saveErrorMessage: String?
     
     var body: some View {
         NavigationStack {
@@ -212,8 +231,15 @@ struct MemeDetailView: View {
                         
                         // Save to photos
                         Button {
-                            UIImageWriteToSavedPhotosAlbum(uiImage, nil, nil, nil)
-                            savedToPhotos.toggle()
+                            PhotoLibrarySaver.shared.save(uiImage) { error in
+                                Task { @MainActor in
+                                    if let error {
+                                        saveErrorMessage = "Could not save to Photos: \(error.localizedDescription)"
+                                    } else {
+                                        savedToPhotos.toggle()
+                                    }
+                                }
+                            }
                         } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: savedToPhotos ? "checkmark" : "square.and.arrow.down")
@@ -256,6 +282,17 @@ struct MemeDetailView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert(
+                "Error Saving Photo",
+                isPresented: Binding(
+                    get: { saveErrorMessage != nil },
+                    set: { if !$0 { saveErrorMessage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(saveErrorMessage ?? "")
             }
         }
     }
