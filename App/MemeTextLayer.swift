@@ -134,6 +134,10 @@ struct TextLayerEditor: View {
                 TextField("Enter meme text", text: $layer.text)
                     .textFieldStyle(.roundedBorder)
                     .focused($isTextFocused)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        isTextFocused = false
+                    }
                     .accessibilityLabel("Meme text input")
                     .accessibilityHint("Type your meme text here")
                 

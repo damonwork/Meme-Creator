@@ -7,7 +7,6 @@ import SwiftUI
 /// Browse panda images from the API as templates
 struct TemplatesView: View {
     @EnvironmentObject var fetcher: PandaCollectionFetcher
-    @State private var selectedPanda: Panda?
     
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 12)
@@ -90,7 +89,6 @@ struct TemplatesView: View {
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.3)) {
                                     fetcher.currentPanda = panda
-                                    selectedPanda = panda
                                 }
                                 debugLog("Template selected: \(panda.description)")
                             }

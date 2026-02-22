@@ -15,6 +15,7 @@ struct MemeEditorView: View {
     @State private var customImage: UIImage?
     @State private var useCustomImage = false
     @State private var cachedPandaImage: UIImage?
+    @State private var displayPandaImage: UIImage?
     
     // Text layers
     @State private var textLayers: [MemeTextLayer] = [
@@ -61,6 +62,7 @@ struct MemeEditorView: View {
         }
         .onChange(of: fetcher.currentPanda) { _, _ in
             // Cache panda image when it changes
+            displayPandaImage = nil
             cachePandaImage()
         }
         .alert("Error", isPresented: $showError) {
@@ -107,7 +109,7 @@ struct MemeEditorView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 20)
         }
-        .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.immediately)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showControls)
     }
     
@@ -133,7 +135,7 @@ struct MemeEditorView: View {
                 .padding(.trailing, 16)
                 .padding(.vertical, 8)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
         }
     }
     
@@ -155,6 +157,12 @@ struct MemeEditorView: View {
                 loadingView(size: CGSize(width: safeWidth, height: canvasHeight))
             } else if let errorMsg = fetcher.errorMessage {
                 errorView(message: errorMsg, size: CGSize(width: safeWidth, height: canvasHeight))
+            } else if let displayPandaImage {
+                MemeCanvasView(
+                    uiImage: displayPandaImage,
+                    textLayers: textLayers,
+                    canvasSize: CGSize(width: safeWidth, height: canvasHeight)
+                )
             } else {
                 // Use AsyncImage for panda images
                 pandaCanvasView(maxWidth: safeWidth, maxHeight: canvasHeight)
@@ -188,9 +196,6 @@ struct MemeEditorView: View {
             }
         }
         .frame(maxWidth: safeWidth, minHeight: 200, maxHeight: canvasHeight)
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
     }
     
     @ViewBuilder
@@ -470,8 +475,9 @@ struct MemeEditorView: View {
         guard let url = fetcher.currentPanda.imageUrl else { return }
         Task {
             if let (data, _) = try? await URLSession.shared.data(from: url),
-               let image = UIImage(data: data) {
-                cachedPandaImage = image
+               let fullImage = UIImage(data: data) {
+                cachedPandaImage = fullImage
+                displayPandaImage = resizedImage(fullImage, maxDimension: 1400)
             }
         }
     }
@@ -487,8 +493,22 @@ struct MemeEditorView: View {
             selectedLayerID = nil
             selectedPhotoItem = nil
             cachedPandaImage = nil
+            displayPandaImage = nil
         }
         debugLog("Editor reset")
+    }
+
+    private func resizedImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let maxSide = max(image.size.width, image.size.height)
+        guard maxSide > maxDimension else { return image }
+
+        let scaleRatio = maxDimension / maxSide
+        let targetSize = CGSize(width: image.size.width * scaleRatio, height: image.size.height * scaleRatio)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
     }
 
     private func clampedPosition(_ position: CGSize, in canvasSize: CGSize) -> CGSize {
@@ -535,6 +555,7 @@ struct MemeEditorView: View {
         }
         
         cachedPandaImage = downloadedImage
+        displayPandaImage = resizedImage(downloadedImage, maxDimension: 1400)
         return downloadedImage
     }
     
