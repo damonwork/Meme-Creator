@@ -17,3 +17,5 @@ In this walkthrough, you’ll learn how asynchronous data fetching works, and ho
 ## Running the Sample Code Project
 
 Before running this sample on a physical device, select a Development Team under the Signing & Capabilities section in the project editor.
+
+You can now open the project directly in Xcode using `MemeCreator.xcodeproj`.
